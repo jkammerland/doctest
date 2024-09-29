@@ -1,6 +1,9 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
-project(example_exe VERSION 0.0.1 LANGUAGES CXX)
+project(
+  example_exe
+  VERSION 0.0.1
+  LANGUAGES CXX)
 
 find_package(doctest REQUIRED)
 
