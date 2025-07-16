@@ -1,0 +1,67 @@
+name: Linux CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: ON
+  CTEST_PARALLEL_LEVEL: 2
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+          
+      - name: Install GCC
+        if: matrix.compiler == 'gcc'
+        run: |
+          sudo apt-get install -y gcc-13 g++-13
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+          
+      - name: Install Clang
+        if: matrix.compiler == 'clang'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100
+          
+      - name: Configure CMake (GCC)
+        if: matrix.compiler == 'gcc'
+        run: |
+          cmake -B build -S . -G Ninja \
+            -D CMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -D CMAKE_C_COMPILER=gcc \
+            -D CMAKE_CXX_COMPILER=g++
+            
+      - name: Configure CMake (Clang)
+        if: matrix.compiler == 'clang'
+        run: |
+          cmake -B build -S . -G Ninja \
+            -D CMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -D CMAKE_C_COMPILER=clang \
+            -D CMAKE_CXX_COMPILER=clang++
+            
+      - name: Build
+        run: cmake --build build
+        
+      - name: Test
+        run: ctest --test-dir build --no-tests=error

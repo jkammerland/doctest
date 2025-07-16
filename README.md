@@ -4,28 +4,41 @@
 <table>
     <tr>
         <td>
-            master branch
+            <strong>Platform</strong>
         </td>
         <td>
-            <a href="https://github.com/doctest/doctest/actions?query=branch%3Amaster"><img src="https://github.com/doctest/doctest/workflows/CI/badge.svg?branch=master"></a>
-        </td>
-        <td>
-            <a href="https://app.codecov.io/gh/doctest/doctest/branch/master"><img src="https://codecov.io/gh/doctest/doctest/branch/master/graph/badge.svg?token=fAdZl67WN7"/></a>
+            <strong>Status</strong>
         </td>
     </tr>
     <tr>
         <td>
-            dev branch
+            Windows (MSVC, Clang-cl)
         </td>
         <td>
-            <a href="https://github.com/doctest/doctest/actions?query=branch%3Adev"><img src="https://github.com/doctest/doctest/workflows/CI/badge.svg?branch=dev"></a>
+            <a href="https://github.com/doctest/doctest/actions/workflows/windows.yml"><img src="https://github.com/doctest/doctest/actions/workflows/windows.yml/badge.svg?branch=master"></a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Linux (GCC, Clang)
         </td>
         <td>
-            <a href="https://app.codecov.io/gh/doctest/doctest/branch/dev"><img src="https://codecov.io/gh/doctest/doctest/branch/dev/graph/badge.svg?token=fAdZl67WN7"/></a>
+            <a href="https://github.com/doctest/doctest/actions/workflows/linux.yml"><img src="https://github.com/doctest/doctest/actions/workflows/linux.yml/badge.svg?branch=master"></a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            macOS (AppleClang)
+        </td>
+        <td>
+            <a href="https://github.com/doctest/doctest/actions/workflows/macos.yml"><img src="https://github.com/doctest/doctest/actions/workflows/macos.yml/badge.svg?branch=master"></a>
         </td>
     </tr>
 </table>
 </b>
+
+> [!IMPORTANT]
+> This is a fork, and it only supports c++20 and beyond
 
 **doctest** is a new C++ testing framework but is by far the fastest both in compile times (by [**orders of magnitude**](doc/markdown/benchmarks.md)) and runtime compared to other feature-rich alternatives. It brings the ability of compiled languages such as [**D**](https://dlang.org/spec/unittest.html) / [**Rust**](https://doc.rust-lang.org/book/second-edition/ch11-00-testing.html) / [**Nim**](https://nim-lang.org/docs/unittest.html) to have tests written directly in the production code thanks to a fast, transparent and flexible test runner with a clean interface.
 
