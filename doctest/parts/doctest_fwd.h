@@ -519,6 +519,7 @@ DOCTEST_MAKE_STD_HEADERS_CLEAN_FROM_WARNINGS_ON_WALL_BEGIN
 #include <cstddef>
 #include <ostream>
 #include <istream>
+#include <tuple>
 DOCTEST_MAKE_STD_HEADERS_CLEAN_FROM_WARNINGS_ON_WALL_END
 #else // DOCTEST_CONFIG_USE_STD_HEADERS
 
@@ -2291,6 +2292,22 @@ struct doctest_type_pair {
 // Helper macro for type pairs - use this for cleaner syntax
 #define DOCTEST_TYPE_PAIR(T, U) doctest_type_pair<T, U>
 
+// Cartesian product template for automatic combination generation
+template <typename Tuple1, typename Tuple2>
+struct doctest_cartesian_product;
+
+// Helper macro to create cartesian product of two tuple types
+#define DOCTEST_CARTESIAN_PRODUCT(tuple1, tuple2) \
+    typename doctest_cartesian_product<tuple1, tuple2>::type
+
+template <typename... Types1, typename... Types2>
+struct doctest_cartesian_product<std::tuple<Types1...>, std::tuple<Types2...>> {
+    template <typename T1>
+    using expand_first = std::tuple<doctest_type_pair<T1, Types2>...>;
+    
+    using type = decltype(std::tuple_cat(expand_first<Types1>{}...));
+};
+
 #define DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE_IMPL(dec, T, U, iter, func)                              \
     template <typename T, typename U>                                                                 \
     static void func();                                                                               \
@@ -2343,6 +2360,64 @@ struct doctest_type_pair {
 
 #define DOCTEST_TEST_CASE_TEMPLATE_2D(dec, T, U, ...)                                                 \
     DOCTEST_TEST_CASE_TEMPLATE_2D_IMPL(dec, T, U, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), __VA_ARGS__)
+
+// for 2D template test cases with cartesian product (automatic combination generation)
+#define DOCTEST_TUPLE_FROM_PARENS(...) std::tuple<__VA_ARGS__>
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE_IMPL(dec, T, U, iter, func)                    \
+    template <typename T, typename U>                                                                 \
+    static void func();                                                                               \
+    namespace { /* NOLINT */                                                                          \
+        template <typename CartesianTuple>                                                            \
+        struct iter;                                                                                  \
+        template <typename... TypePairs>                                                              \
+        struct iter<std::tuple<TypePairs...>>                                                         \
+        {                                                                                             \
+            template <typename TypePair>                                                              \
+            static void registerOne(const char* file, unsigned line, int& index) {                   \
+                using T_type = typename TypePair::first;                                              \
+                using U_type = typename TypePair::second;                                             \
+                doctest::detail::regTest(doctest::detail::TestCase(func<T_type, U_type>, file, line, \
+                                            doctest_detail_test_suite_ns::getCurrentTestSuite(),     \
+                                            doctest::toString<T_type>() + ", " + doctest::toString<U_type>(), \
+                                            int(line) * 1000 + index++)                              \
+                                         * dec);                                                      \
+            }                                                                                         \
+            iter(const char* file, unsigned line, int index) {                                        \
+                (registerOne<TypePairs>(file, line, index), ...);                                     \
+            }                                                                                         \
+        };                                                                                            \
+        template <>                                                                                   \
+        struct iter<std::tuple<>> {                                                                   \
+            iter(const char*, unsigned, int) {}                                                       \
+        };                                                                                            \
+    }                                                                                                 \
+    template <typename T, typename U>                                                                 \
+    static void func()
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE(dec, T, U, id)                                 \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE_IMPL(dec, T, U, DOCTEST_CAT(id, ITERATOR2D_CART), \
+                                                        DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_))
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_INSTANTIATE_IMPL(id, anon, CartesianTuple)            \
+    DOCTEST_GLOBAL_NO_WARNINGS(DOCTEST_CAT(anon, DUMMY), /* NOLINT(cert-err58-cpp, fuchsia-statically-constructed-objects) */ \
+        doctest::detail::instantiationHelper(                                                         \
+            DOCTEST_CAT(id, ITERATOR2D_CART)<CartesianTuple>(__FILE__, __LINE__, 0)))
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_INVOKE(id, ...)                                       \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_INSTANTIATE_IMPL(id, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), \
+        typename doctest_cartesian_product<__VA_ARGS__>::type) \
+    static_assert(true, "")
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_IMPL(dec, T, U, anon, ...)                            \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE_IMPL(dec, T, U, DOCTEST_CAT(anon, ITERATOR2D_CART), anon); \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_INSTANTIATE_IMPL(anon, anon, \
+        typename doctest_cartesian_product<__VA_ARGS__>::type) \
+    template <typename T, typename U>                                                                  \
+    static void anon()
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN(dec, T, U, ...)                                       \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_IMPL(dec, T, U, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), __VA_ARGS__)
 
 // for subcases
 #define DOCTEST_SUBCASE(name)                                                                      \
@@ -3015,7 +3090,11 @@ namespace detail {
 #define TEST_CASE_TEMPLATE_2D(name, T, U, ...) DOCTEST_TEST_CASE_TEMPLATE_2D(name, T, U, __VA_ARGS__)
 #define TEST_CASE_TEMPLATE_2D_DEFINE(name, T, U, id) DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE(name, T, U, id)
 #define TEST_CASE_TEMPLATE_2D_INVOKE(id, ...) DOCTEST_TEST_CASE_TEMPLATE_2D_INVOKE(id, __VA_ARGS__)
+#define TEST_CASE_TEMPLATE_2D_CARTESIAN(name, T, U, ...) DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN(name, T, U, __VA_ARGS__)
+#define TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE(name, T, U, id) DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_DEFINE(name, T, U, id)
+#define TEST_CASE_TEMPLATE_2D_CARTESIAN_INVOKE(id, ...) DOCTEST_TEST_CASE_TEMPLATE_2D_CARTESIAN_INVOKE(id, __VA_ARGS__)
 #define TYPE_PAIR(T, U) DOCTEST_TYPE_PAIR(T, U)
+#define CARTESIAN_PRODUCT(tuple1, tuple2) DOCTEST_CARTESIAN_PRODUCT(tuple1, tuple2)
 #define SUBCASE(name) DOCTEST_SUBCASE(name)
 #define TEST_SUITE(decorators) DOCTEST_TEST_SUITE(decorators)
 #define TEST_SUITE_BEGIN(name) DOCTEST_TEST_SUITE_BEGIN(name)
