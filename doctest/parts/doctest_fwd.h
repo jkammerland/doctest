@@ -2281,6 +2281,69 @@ int registerReporter(const char* name, int priority, bool isReporter) {
 #define DOCTEST_TEST_CASE_TEMPLATE(dec, T, ...)                                                    \
     DOCTEST_TEST_CASE_TEMPLATE_IMPL(dec, T, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), __VA_ARGS__)
 
+// for 2D template test cases (cartesian product of two template parameters)
+template <typename T, typename U>
+struct doctest_type_pair {
+    using first = T;
+    using second = U;
+};
+
+// Helper macro for type pairs - use this for cleaner syntax
+#define DOCTEST_TYPE_PAIR(T, U) doctest_type_pair<T, U>
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE_IMPL(dec, T, U, iter, func)                              \
+    template <typename T, typename U>                                                                 \
+    static void func();                                                                               \
+    namespace { /* NOLINT */                                                                          \
+        template <typename Tuple>                                                                     \
+        struct iter;                                                                                  \
+        template <typename... Types>                                                                  \
+        struct iter<std::tuple<Types...>>                                                             \
+        {                                                                                             \
+            template <typename TypePair>                                                              \
+            static void registerOne(const char* file, unsigned line, int& index) {                   \
+                using T_type = typename TypePair::first;                                              \
+                using U_type = typename TypePair::second;                                             \
+                doctest::detail::regTest(doctest::detail::TestCase(func<T_type, U_type>, file, line, \
+                                            doctest_detail_test_suite_ns::getCurrentTestSuite(),     \
+                                            doctest::toString<T_type>() + ", " + doctest::toString<U_type>(), \
+                                            int(line) * 1000 + index++)                              \
+                                         * dec);                                                      \
+            }                                                                                         \
+            iter(const char* file, unsigned line, int index) {                                        \
+                (registerOne<Types>(file, line, index), ...);                                         \
+            }                                                                                         \
+        };                                                                                            \
+        template <>                                                                                   \
+        struct iter<std::tuple<>> {                                                                   \
+            iter(const char*, unsigned, int) {}                                                       \
+        };                                                                                            \
+    }                                                                                                 \
+    template <typename T, typename U>                                                                 \
+    static void func()
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE(dec, T, U, id)                                           \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE_IMPL(dec, T, U, DOCTEST_CAT(id, ITERATOR2D),                 \
+                                              DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_))
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_INSTANTIATE_IMPL(id, anon, ...)                                 \
+    DOCTEST_GLOBAL_NO_WARNINGS(DOCTEST_CAT(anon, DUMMY), /* NOLINT(cert-err58-cpp, fuchsia-statically-constructed-objects) */ \
+        doctest::detail::instantiationHelper(                                                         \
+            DOCTEST_CAT(id, ITERATOR2D)<std::tuple<__VA_ARGS__>>(__FILE__, __LINE__, 0)))
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_INVOKE(id, ...)                                                 \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_INSTANTIATE_IMPL(id, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), __VA_ARGS__) \
+    static_assert(true, "")
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D_IMPL(dec, T, U, anon, ...)                                      \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE_IMPL(dec, T, U, DOCTEST_CAT(anon, ITERATOR2D), anon);        \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_INSTANTIATE_IMPL(anon, anon, __VA_ARGS__)                           \
+    template <typename T, typename U>                                                                  \
+    static void anon()
+
+#define DOCTEST_TEST_CASE_TEMPLATE_2D(dec, T, U, ...)                                                 \
+    DOCTEST_TEST_CASE_TEMPLATE_2D_IMPL(dec, T, U, DOCTEST_ANONYMOUS(DOCTEST_ANON_TMP_), __VA_ARGS__)
+
 // for subcases
 #define DOCTEST_SUBCASE(name)                                                                      \
     if(const doctest::detail::Subcase & DOCTEST_ANONYMOUS(DOCTEST_ANON_SUBCASE_) DOCTEST_UNUSED =  \
@@ -2949,6 +3012,10 @@ namespace detail {
 #define TEST_CASE_TEMPLATE_DEFINE(name, T, id) DOCTEST_TEST_CASE_TEMPLATE_DEFINE(name, T, id)
 #define TEST_CASE_TEMPLATE_INVOKE(id, ...) DOCTEST_TEST_CASE_TEMPLATE_INVOKE(id, __VA_ARGS__)
 #define TEST_CASE_TEMPLATE_APPLY(id, ...) DOCTEST_TEST_CASE_TEMPLATE_APPLY(id, __VA_ARGS__)
+#define TEST_CASE_TEMPLATE_2D(name, T, U, ...) DOCTEST_TEST_CASE_TEMPLATE_2D(name, T, U, __VA_ARGS__)
+#define TEST_CASE_TEMPLATE_2D_DEFINE(name, T, U, id) DOCTEST_TEST_CASE_TEMPLATE_2D_DEFINE(name, T, U, id)
+#define TEST_CASE_TEMPLATE_2D_INVOKE(id, ...) DOCTEST_TEST_CASE_TEMPLATE_2D_INVOKE(id, __VA_ARGS__)
+#define TYPE_PAIR(T, U) DOCTEST_TYPE_PAIR(T, U)
 #define SUBCASE(name) DOCTEST_SUBCASE(name)
 #define TEST_SUITE(decorators) DOCTEST_TEST_SUITE(decorators)
 #define TEST_SUITE_BEGIN(name) DOCTEST_TEST_SUITE_BEGIN(name)
