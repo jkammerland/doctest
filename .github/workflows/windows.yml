@@ -29,7 +29,6 @@ jobs:
       - name: Setup Clang
         if: matrix.compiler == 'clang-cl'
         run: |
-          choco install llvm --version=18.1.8
           echo "C:\Program Files\LLVM\bin" >> $GITHUB_PATH
         
       - name: Configure CMake (MSVC)

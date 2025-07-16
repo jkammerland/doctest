@@ -58,7 +58,8 @@ jobs:
           cmake -B build -S . -G Ninja \
             -D CMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -D CMAKE_C_COMPILER=clang \
-            -D CMAKE_CXX_COMPILER=clang++
+            -D CMAKE_CXX_COMPILER=clang++ \
+            -D CMAKE_CXX_FLAGS="-Wno-unsafe-buffer-usage"
             
       - name: Build
         run: cmake --build build
