@@ -3302,6 +3302,7 @@ DOCTEST_MSVC_SUPPRESS_WARNING(5245) // unreferenced function with internal linka
 DOCTEST_MAKE_STD_HEADERS_CLEAN_FROM_WARNINGS_ON_WALL_BEGIN
 
 // required includes - will go only in one translation unit!
+#include <tuple>
 #include <ctime>
 #include <cmath>
 #include <climits>
