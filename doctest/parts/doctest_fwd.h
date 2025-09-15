@@ -47,6 +47,8 @@
 #define DOCTEST_VERSION_MINOR 4
 #define DOCTEST_VERSION_PATCH 12
 
+#include <tuple> // for std::tuple_cat
+
 // util we need here
 #define DOCTEST_TOSTR_IMPL(x) #x
 #define DOCTEST_TOSTR(x) DOCTEST_TOSTR_IMPL(x)
