@@ -38,3 +38,56 @@ jobs:
         
       - name: Test
         run: ctest --test-dir build --no-tests=error
+
+      - name: Debug illegal instruction if test fails
+        if: failure() && matrix.build_type == 'Release'
+        run: |
+          echo "Test failed, debugging with lldb..."
+          # Find the failing test executable
+          TEST_EXE="build/examples/all_features/disabled_but_evaluated"
+
+          if [ -f "$TEST_EXE" ]; then
+            echo "Debugging $TEST_EXE with lldb..."
+
+            # Create lldb commands file
+            cat > debug_commands.txt << 'EOF'
+          run --dt-no-path-filenames=1 --dt-no-line-numbers=1 --dt-no-exitcode=1 --dt-gnu-file-line=0 --dt-no-time-in-output=1
+          bt
+          register read
+          disassemble --frame --pc
+          thread backtrace all
+          quit
+          EOF
+
+            # Run lldb with the commands
+            lldb -b -s debug_commands.txt "$TEST_EXE" || true
+
+            # Alternative: run with environment variable to capture crash
+            echo "=== Running with crash reporting ==="
+            MallocStackLogging=1 DYLD_INSERT_LIBRARIES=/usr/lib/libgmalloc.dylib \
+              "$TEST_EXE" --dt-no-path-filenames=1 --dt-no-line-numbers=1 --dt-no-exitcode=1 \
+              --dt-gnu-file-line=0 --dt-no-time-in-output=1 2>&1 || true
+
+            # Check for crash logs
+            echo "=== Checking for crash logs ==="
+            CRASH_LOG=$(find ~/Library/Logs/DiagnosticReports -name "disabled_but_evaluated*.crash" -mmin -5 2>/dev/null | head -1)
+            if [ -n "$CRASH_LOG" ]; then
+              echo "Found crash log: $CRASH_LOG"
+              cat "$CRASH_LOG"
+            fi
+
+            # Also try to get more info about the binary
+            echo "=== Binary info ==="
+            file "$TEST_EXE"
+            otool -L "$TEST_EXE"
+
+            echo "=== Disassembly of main ==="
+            otool -tvV "$TEST_EXE" | grep -A 50 "_main:"
+
+            echo "=== CPU info ==="
+            sysctl -n machdep.cpu.brand_string
+            sysctl -a | grep -E "cpu\.(features|leaf7_features)" || true
+
+            echo "=== Compiler version ==="
+            clang++ --version
+          fi
