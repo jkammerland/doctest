@@ -50,6 +50,8 @@
 #define DOCTEST_VERSION_MINOR 4
 #define DOCTEST_VERSION_PATCH 12
 
+#include <tuple> // for std::tuple_cat
+
 // util we need here
 #define DOCTEST_TOSTR_IMPL(x) #x
 #define DOCTEST_TOSTR(x) DOCTEST_TOSTR_IMPL(x)
@@ -3302,7 +3304,6 @@ DOCTEST_MSVC_SUPPRESS_WARNING(5245) // unreferenced function with internal linka
 DOCTEST_MAKE_STD_HEADERS_CLEAN_FROM_WARNINGS_ON_WALL_BEGIN
 
 // required includes - will go only in one translation unit!
-#include <tuple>
 #include <ctime>
 #include <cmath>
 #include <climits>
